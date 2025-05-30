@@ -1,6 +1,7 @@
 import json
+from src.class_abstract import BaseJson
 
-class JSONSaver:
+class JSONSaver(BaseJson):
     """
     Класс для работы с файлами: сохранение и чтение данных в формате JSON
     """

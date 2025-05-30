@@ -10,3 +10,26 @@ class BaseApi(ABC):
     @abstractmethod
     def get_vacancies(self):
         pass
+
+class BaseVacancy(ABC):
+    @abstractmethod
+    def cast_to_object_list(self):
+        pass
+
+
+class BaseJson(ABC):
+    @abstractmethod
+    def save_data(self, data):
+        pass
+
+    @abstractmethod
+    def read_data(self):
+        pass
+
+    @abstractmethod
+    def add_vacancy(self):
+        pass
+
+    @abstractmethod
+    def delete_vacancy(self):
+        pass

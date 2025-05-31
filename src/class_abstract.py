@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 
 class BaseApi(ABC):
     """Базовый абстрактный клас для API методов"""
-
+    @property
     @abstractmethod
-    def response_check(self):
+    def url(self):
         pass
 
     @abstractmethod

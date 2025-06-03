@@ -11,11 +11,6 @@ class BaseApi(ABC):
     def get_vacancies(self):
         pass
 
-class BaseVacancy(ABC):
-    @abstractmethod
-    def cast_to_object_list(self):
-        pass
-
 
 class BaseJson(ABC):
     @abstractmethod

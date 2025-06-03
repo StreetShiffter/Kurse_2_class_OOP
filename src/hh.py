@@ -1,117 +1,124 @@
-import requests
-import json
+from typing import Any, Optional
 
 
-class JSONFileWorker:
-    """
-    Класс для работы с файлами: сохранение и чтение данных в формате JSON
-    """
+class Vacancy:
+    """Класс для обработки вакансий"""
 
-    def __init__(self, filename='vacancies.json'):
-        self.filename = filename
+    __slots__ = (
+        "id",
+        "name",
+        "link",
+        "area",
+        "__salary",
+        "description",
+        "salary_from",
+        "salary_to",
+    )
 
-    def save_data(self, data):
-        """Сохраняет данные в JSON-файл"""
-        with open(self.filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+    def __init__(
+        self,
+        id: int,
+        name: str,
+        link: str,
+        salary: Optional[dict[str, Any]],
+        area: str,
+        description: str,
+    ):
+        self.id = id
+        self.name = name
+        self.link = link
+        self.area = area
+        self.__salary = salary
+        self.description = description
+        self.salary_from = self.__validate_salary_from()
+        self.salary_to = self.__validate_salary_to()
+        # self.__get_salary()
 
-    def read_data(self):
-        """Читает данные из JSON-файла"""
-        try:
-            with open(self.filename, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return []
+    def __validate_salary_from(self) -> int:
+        """Валидация данных по зарплате для поля 'от'"""
+        self.salary_from = 0
+        if self.__salary:  # если есть данные о зарплате
+            self.salary_from = self.__salary.get("from") or 0
 
+            # переводим в целые числа при необходимости
+            try:
+                self.salary_from = int(self.salary_from)
+            except (TypeError, ValueError):
+                self.salary_from = 0
+        return self.salary_from
 
-class Parser:
-    """
-    Базовый класс парсера
-    """
+    def __validate_salary_to(self) -> int:
+        """Валидация данных по зарплате для поля 'до'"""
+        self.salary_to = 0
+        if self.__salary:  # если есть данные о зарплате
+            self.salary_to = self.__salary.get("to") or 0
 
-    def __init__(self, file_worker):
-        self.file_worker = file_worker
+            # переводим в целые числа при необходимости
+            try:
+                self.salary_to = int(self.salary_to)
+            except (TypeError, ValueError):
+                self.salary_to = 0
+        return self.salary_to
 
+    # def __get_salary(self) -> None:
+    #     """Обработка данных о зарплате"""
+    #     self.salary_from = 0
+    #     self.salary_to = 0
+    #
+    #     if self.__salary:  # если есть данные о зарплате
+    #         self.salary_from = self.__salary.get("from") or 0
+    #         self.salary_to = self.__salary.get("to") or 0
+    #
+    #         # переводим в целые числа при необходимости
+    #         try:
+    #             self.salary_from = int(self.salary_from)
+    #             self.salary_to = int(self.salary_to)
+    #         except (TypeError, ValueError):
+    #             self.salary_from = 0
+    #             self.salary_to = 0
 
-class HH(Parser):
-    """
-    Класс для работы с API HeadHunter
-    """
+    def __gte__(self, other):
+        """Сравнение зарплат"""
+        if self.salary_from >= other.salary_from:
+            return self.salary_from
 
-    def __init__(self, file_worker):
-        self.url = 'https://api.hh.ru/self'
-        self.headers = {'User-Agent': 'HH-User-Agent'}
-        self.params = {'text': '', 'page': 0, 'per_page': 100}
-        self.vacancies = []
-        super().__init__(file_worker)
+    def __lte__(self, other):
+        """Сравнение зарплат"""
+        if self.salary_from <= other.salary_from:
+            return self.salary_from
 
-    def load_vacancies(self, keyword):
-        """Загружает вакансии по ключевому слову"""
-        self.params['text'] = keyword
-        while self.params.get('page') != 20:  # Загружаем до 20 страниц
-            response = requests.get(self.url, headers=self.headers, params=self.params)
-            if response.status_code == 200:
-                vacancies = response.json().get('items', [])
-                self.vacancies.extend(vacancies)
-                self.params['page'] += 1
-            else:
-                print("Ошибка при загрузке данных:", response.status_code)
-                break
+    def as_dict(self) -> dict[str, Any]:
+        """Представление данных в виде словаря"""
+        # salary_data = {}
+        # if self._salary:
+        #     salary_data["salary"] = self._salary
+        # if self.salary_from > 0:
+        #     salary_data["salary_from"] = self.salary_from
+        # if self.salary_to > 0:
+        #     salary_data["salary_to"] = self.salary_to
 
-        # Сохраняем результат в файл
-        self.file_worker.save_data(self.vacancies)
-        print(f"Загружено {len(self.vacancies)} вакансий")
+        result = {
+            "id": self.id,
+            "name": self.name,
+            "link": self.link,
+            "area": self.area,
+            "description": self.description,
+            # **salary_data,
+        }
 
+        if self.salary_from > 0:
+            result["salary_from"] = self.salary_from
+        if self.salary_to > 0:
+            result["salary_to"] = self.salary_to
 
-def print_vacancies(vacancies):
-    """Выводит информацию о вакансиях"""
-    for vacancy in vacancies:
-        name = vacancy['name']
-        employer = vacancy['employer']['name']
-        salary = vacancy.get('salary')
-        area = vacancy['area']['name']
+        return result
 
-        salary_str = "Не указана"
-        if salary:
-            from_salary = f"{salary['from']} {salary['currency']}" if salary['from'] else ""
-            to_salary = f"{salary['to']} {salary['currency']}" if salary['to'] else ""
-            salary_str = f"{from_salary} – {to_salary}".strip(" – ")
+    def __str__(self):
+        """Представление для объектов класса Vacancy"""
+        return (
+            f"Vacancy(id={self.id}, name ='{self.name}', salary_from={self.salary_from}, "
+            f"salary_to={self.salary_to}, link='{self.link}')"
+        )
 
-        print(f"Название: {name}")
-        print(f"Компания: {employer}")
-        print(f"Зарплата: {salary_str}")
-        print(f"Город: {area}")
-        print("-" * 50)
-
-
-# === Основная часть программы ===
-if __name__ == '__main__':
-    file_worker = JSONFileWorker()
-    hh_parser = HH(file_worker)
-
-    # Шаг 1: Загрузить вакансии по ключевому слову
-    hh_parser.load_vacancies("python")
-
-    # Шаг 2: Прочитать данные из файла
-    vacancies = file_worker.read_data()
-
-    # Шаг 3: Вывести все вакансии
-    print_vacancies(vacancies)
-
-    # Шаг 4: Фильтрация по городу
-    city = input("Введите город для фильтрации (или Enter, чтобы пропустить): ")
-    if city:
-        filtered = [v for v in vacancies if v['area']['name'].lower() == city.lower()]
-        print(f"\nНайдено вакансий в городе '{city}': {len(filtered)}")
-        print_vacancies(filtered)
-
-    # Шаг 5: Фильтрация по минимальной зарплате
-    min_salary = input("Введите минимальную зарплату (или Enter, чтобы пропустить): ")
-    if min_salary.isdigit():
-        min_salary = int(min_salary)
-        filtered = [
-            v for v in vacancies
-            if v.get('salary') and v['salary'].get('from') and v['salary']['from'] >= min_salary
-        ]
-        print(f"\nНайдено вакансий с зарплатой от {min_salary}: {len(filtered)}")
-        print_vacancies(filtered)
+    def __repr__(self):
+        return self.__str__()

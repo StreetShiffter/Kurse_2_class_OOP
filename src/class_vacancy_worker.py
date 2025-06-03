@@ -1,28 +1,156 @@
-from class_abstract import BaseVacancy
+import pprint
+from src.class_api import HeadHunterAPI
 
-class Vacancy(BaseVacancy):
-    def cast_to_object_list(self):
-        pass
- # def get_vacancies(self,
- #                      text: str,
- #                      salary: int,
- #                      per_page: int = 5,
- #                      area: int = 1,
- #                      accept_temporary: bool = False) -> list[dict]:
- #        if not self.__response_check():
- #            raise ConnectionError("API недоступно. Невозможно получить вакансии.")
- #
- #        headers = {'User-Agent': USER_AGENT}
- #        params = {
- #            'text': text,
- #            'salary': salary,
- #            'per_page': per_page,
- #            'area': area,
- #            'accept_temporary': accept_temporary
- #        }
- #        try:
- #            response = requests.get(self.url, headers=headers, params=params)
- #            response.raise_for_status()  # Если код будет 200
- #            return response.json().get('items', [])  # получение items если найдет( или [] )
- #        except requests.exceptions.RequestException as e:  # отлов только сетевых ошибок
- #            raise ValueError(f"Ошибка при выполнении запроса: {e}") from e  # Сохранить историю ошибки from e
+class Vacancy:
+    """Класс для обработки вакансий"""
+
+    __slots__ = (
+        "name",
+        "link",
+        "area",
+        "__salary",
+        "description",
+        "salary_from",
+        "salary_to",
+    )
+
+    def __init__(
+        self,
+        name: str,
+        link: str,
+        salary: dict[str, int, float],
+        area: str,
+        description: str
+    ):
+
+        self.name = name
+        self.link = link
+        self.area = area
+        self.__salary = salary #Зарплата подробно в словаре
+        self.description = description
+        self.salary_from = self.__salary_from() #Валидируем строку от из словаря
+        self.salary_to = self.__salary_to() #Валидируем строку до из словаря
+
+    def __salary_from(self) -> int:
+        """Валидация данных по зарплате для поля 'от'"""
+        self.salary_from = 0
+        if self.__salary:  # если есть данные о зарплате
+            self.salary_from = self.__salary.get("from") or 0
+
+            try:
+                self.salary_from = int(self.salary_from)
+            except (TypeError, ValueError):
+                self.salary_from = 0
+        return self.salary_from
+
+    def __salary_to(self) -> int:
+        """Валидация данных по зарплате для поля 'до'"""
+        self.salary_to = 0
+        if self.__salary:  #
+            self.salary_to = self.__salary.get("to") or 0
+
+            try:
+                self.salary_to = int(self.salary_to)
+            except (TypeError, ValueError):
+                self.salary_to = 0
+        return self.salary_to
+
+    def __repr__(self) -> str:
+        """Метод преобразования атрибутов в строку и вывод в консоль"""
+        return (f"{self.name} "
+                f"{self.link} "
+                f"{self.area} "
+                f"{self.__salary} "
+                f"{self.description} "
+                f"{self.salary_from}-"
+                f"{self.salary_to}\n"
+                "--------------------------")
+
+    def __ge__(self, other):
+        if not isinstance(other, Vacancy):
+            raise AttributeError("Невозможно сравнить разные типы")
+        return self.salary_from >= other.salary_from
+
+    def __le__(self, other):
+        if not isinstance(other, Vacancy):
+            raise AttributeError("Невозможно сравнить разные типы")
+        return self.salary_from <= other.salary_from
+
+    def __gt__(self, other):
+        if not isinstance(other, Vacancy):
+            raise AttributeError("Невозможно сравнить разные типы")
+        return self.salary_from > other.salary_from
+
+    def __lt__(self, other):
+        if not isinstance(other, Vacancy):
+            raise AttributeError("Невозможно сравнить разные типы")
+        return self.salary_from < other.salary_from
+
+    @staticmethod
+    def cast_to_object_list(data: dict) -> "Vacancy":
+        """метод преобразования JSON данных в объект """
+        vacancy_list = []
+
+        for item in data:
+            # Извлечение полей из JSON-объекта вакансии
+            name = item.get("name")
+            link = item.get("url")
+
+            area_full = item.get("area")
+            area = area_full.get("name")
+
+            description = item.get("snippet", {}).get("responsibility") or item.get("description")
+
+            salary = item.get("salary")
+
+            # Создание объекта Vacancy
+            vacancy = Vacancy(
+                name=name,
+                link=link,
+                area=area,
+                salary = salary,
+                description=description
+            )
+            vacancy_list.append(vacancy)
+
+        return vacancy_list
+
+    @staticmethod
+    def sort_vacancies_by_salary(vacancies: list["Vacancy"], reverse: bool = False) -> list["Vacancy"]:
+        """Сортировка списка вакансий по зарплате (по возрастанию или убыванию)"""
+        return sorted(vacancies, key=lambda v: v.salary_from, reverse=reverse)
+
+
+if __name__ == "__main__":
+    hh_api = HeadHunterAPI() # создаем объект API
+    data = hh_api.get_vacancies("Python разработчик")
+    # vacancy = Vacancy('Плотник',
+    #                   'https://api.hh.ru/areas/1',
+    #                   {'from': 5000000, 'to': 180000, 'currency': 'RUR'},
+    #                   "Москва",
+    #                   "Выполнение столярно-плотницких работ")
+    #
+    # print(vacancy)
+    # pprint.pprint(vacancies)
+
+    # vacancies = Vacancy.cast_to_object_list(data)
+    # if len(vacancies) >= 2:
+    #     if vacancies[0] > vacancies[9]:
+    #         print("Вакансия 0 лучше вакансии 1")
+    #     elif vacancies[0] < vacancies[1]:
+    #         print("Вакансия 1 лучше вакансии 0")
+    #     else:
+    #         print("Зарплаты равны")
+    # else:
+    #     print("Недостаточно вакансий для сравнения")
+
+    # # Сортируем по возрастанию зарплаты
+    # sorted_vacancies_asc = Vacancy.sort_vacancies_by_salary(vacancies)
+    #
+    # # Сортируем по убыванию зарплаты
+    # sorted_vacancies_desc = Vacancy.sort_vacancies_by_salary(vacancies, reverse=False)
+    #
+    # # Выводим результат
+    # for vacancy in sorted_vacancies_desc:
+    #     print(vacancy)
+

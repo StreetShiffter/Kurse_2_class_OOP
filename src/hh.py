@@ -1,124 +1,142 @@
-from typing import Any, Optional
+import json
+import os
+from typing import List, Dict, Any, Optional
+from src.class_abstract import BaseFileStorage
+from src.class_api import HeadHunterAPI
+from src.class_vacancy_worker import Vacancy
 
 
-class Vacancy:
-    """Класс для обработки вакансий"""
+class JSONSaver(BaseFileStorage):
+    def __init__(self, file_name: str = "vacancies.json"):
+        # Получаем путь относительно текущего файла
+        self.__file_path = os.path.join(os.path.dirname(__file__), "..", "data", file_name)
+        print(f"[INFO] Файл будет сохранён по пути: {self.__file_path}")
+        self._ensure_file_exists()
 
-    __slots__ = (
-        "id",
-        "name",
-        "link",
-        "area",
-        "__salary",
-        "description",
-        "salary_from",
-        "salary_to",
-    )
+    def _ensure_file_exists(self) -> None:
+        """Создает файл, если он не существует"""
+        os.makedirs(os.path.dirname(self.__file_path), exist_ok=True)
+        if not os.path.exists(self.__file_path):
+            with open(self.__file_path, "w", encoding="utf-8") as f:
+                json.dump([], f)
 
-    def __init__(
-        self,
-        id: int,
-        name: str,
-        link: str,
-        salary: Optional[dict[str, Any]],
-        area: str,
-        description: str,
-    ):
-        self.id = id
-        self.name = name
-        self.link = link
-        self.area = area
-        self.__salary = salary
-        self.description = description
-        self.salary_from = self.__validate_salary_from()
-        self.salary_to = self.__validate_salary_to()
-        # self.__get_salary()
+    def _load_data(self) -> List[Dict]:
+        """Загрузка данных из файла"""
+        try:
+            with open(self.__file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-    def __validate_salary_from(self) -> int:
-        """Валидация данных по зарплате для поля 'от'"""
-        self.salary_from = 0
-        if self.__salary:  # если есть данные о зарплате
-            self.salary_from = self.__salary.get("from") or 0
+            # Если элементы — строки, парсим их как JSON
+            if isinstance(data, list) and data and isinstance(data[0], str):
+                parsed_data = []
+                for item in data:
+                    try:
+                        parsed_data.append(json.loads(item))
+                    except json.JSONDecodeError:
+                        continue  # Пропускаем поврежденные строки
+                return parsed_data
 
-            # переводим в целые числа при необходимости
-            try:
-                self.salary_from = int(self.salary_from)
-            except (TypeError, ValueError):
-                self.salary_from = 0
-        return self.salary_from
+            return data
 
-    def __validate_salary_to(self) -> int:
-        """Валидация данных по зарплате для поля 'до'"""
-        self.salary_to = 0
-        if self.__salary:  # если есть данные о зарплате
-            self.salary_to = self.__salary.get("to") or 0
+        except json.JSONDecodeError:
+            return []
 
-            # переводим в целые числа при необходимости
-            try:
-                self.salary_to = int(self.salary_to)
-            except (TypeError, ValueError):
-                self.salary_to = 0
-        return self.salary_to
+    def _save_data(self, data: List[Dict]) -> None:
+        """Сохранение данных в файл"""
+        with open(self.__file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
 
-    # def __get_salary(self) -> None:
-    #     """Обработка данных о зарплате"""
-    #     self.salary_from = 0
-    #     self.salary_to = 0
-    #
-    #     if self.__salary:  # если есть данные о зарплате
-    #         self.salary_from = self.__salary.get("from") or 0
-    #         self.salary_to = self.__salary.get("to") or 0
-    #
-    #         # переводим в целые числа при необходимости
-    #         try:
-    #             self.salary_from = int(self.salary_from)
-    #             self.salary_to = int(self.salary_to)
-    #         except (TypeError, ValueError):
-    #             self.salary_from = 0
-    #             self.salary_to = 0
+    def add_vacancy(self, vacancy: Dict[str, Any]) -> None:
+        """Добавление уникальной вакансии в файл"""
+        data = self._load_data()
 
-    def __gte__(self, other):
-        """Сравнение зарплат"""
-        if self.salary_from >= other.salary_from:
-            return self.salary_from
+        # Проверяем на дубликаты по имени + зарплате
+        is_duplicate = False
+        for item in data:
+            if (
+                item.get("name") == vacancy.get("name")
+                and item.get("salary_from") == vacancy.get("salary_from")
+                and item.get("salary_to") == vacancy.get("salary_to")
+            ):
+                is_duplicate = True
+                break
 
-    def __lte__(self, other):
-        """Сравнение зарплат"""
-        if self.salary_from <= other.salary_from:
-            return self.salary_from
+        if not is_duplicate:
+            data.append(vacancy)
+            self._save_data(data)
+            print(f"[INFO] Вакансия '{vacancy.get('name')}' успешно добавлена.")
+        else:
+            print(f"[INFO] Вакансия '{vacancy.get('name')}' уже существует.")
 
-    def as_dict(self) -> dict[str, Any]:
-        """Представление данных в виде словаря"""
-        # salary_data = {}
-        # if self._salary:
-        #     salary_data["salary"] = self._salary
-        # if self.salary_from > 0:
-        #     salary_data["salary_from"] = self.salary_from
-        # if self.salary_to > 0:
-        #     salary_data["salary_to"] = self.salary_to
+    def get_vacancies(self, criteria: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Получение вакансий по критериям"""
+        data = self._load_data()
+        if not criteria:
+            return data
 
-        result = {
-            "id": self.id,
-            "name": self.name,
-            "link": self.link,
-            "area": self.area,
-            "description": self.description,
-            # **salary_data,
-        }
-
-        if self.salary_from > 0:
-            result["salary_from"] = self.salary_from
-        if self.salary_to > 0:
-            result["salary_to"] = self.salary_to
-
+        result = []
+        for item in data:
+            match = True
+            for key, value in criteria.items():
+                if item.get(key) != value:
+                    match = False
+                    break
+            if match:
+                result.append(item)
         return result
 
-    def __str__(self):
-        """Представление для объектов класса Vacancy"""
-        return (
-            f"Vacancy(id={self.id}, name ='{self.name}', salary_from={self.salary_from}, "
-            f"salary_to={self.salary_to}, link='{self.link}')"
-        )
+    def delete_vacancy(self, criteria: Dict[str, Any]) -> None:
+        """Удаление вакансии по критерию"""
+        data = self._load_data()
+        new_data = [item for item in data if not all(item.get(k) == v for k, v in criteria.items())]
+        self._save_data(new_data)
 
-    def __repr__(self):
-        return self.__str__()
+if __name__ == "__main__":
+
+    api = HeadHunterAPI()
+    vacancies_json = api.get_vacancies(text="Python", per_page=5)
+    print(f"Найдено вакансий: {len(vacancies_json)}")
+
+    vacancies = Vacancy.cast_to_object_list(vacancies_json)
+
+
+    for vac in vacancies:
+        print(f"Название: {vac.name}")
+        print(f"Ссылка: {vac.link}")
+        print(f"Зарплата: {vac.salary_from} - {vac.salary_to}")
+        print(f"Описание: {vac.description}")
+        print("-" * 40)
+
+    # Сохраняем в JSON
+    saver = JSONSaver()
+
+    # Добавляем тестовую вакансию
+    test_vac = {
+        "name": "Шутник",
+        "link": "https://example.com/test-vac",
+        "salary_from": 7500,
+        "salary_to": 10000,
+        "description": "Надо носить кофе сеньорам"
+    }
+    vac_obj = Vacancy.from_dict(test_vac)
+    saver.add_vacancy(vac_obj.to_dict())
+
+    # Добавляем вакансии из API
+    for vac in vacancies:
+        saver.add_vacancy(vac.to_dict())
+
+    # Проверяем содержимое файла
+    saved_vacs = saver.get_vacancies()
+    print("\n[INFO] Вакансии в файле:")
+    for v in saved_vacs:
+        print(v)
+
+        # Удаляем тестовую вакансию по ссылке
+    print("\n[INFO] Удаляем тестовую вакансию...")
+    saver.delete_vacancy({"link": "https://example.com/test-vac"})
+
+    # Проверяем, что вакансия удалена
+    saved_vacs_after = saver.get_vacancies()
+    print("\n[INFO] Вакансии в файле после удаления:")
+    for v in saved_vacs_after:
+        print(v)

@@ -57,10 +57,10 @@ class HeadHunterAPI(BaseApi) :
             raise ValueError(f"Ошибка при выполнении запроса: {e}") from e  # Сохранить историю ошибки from e
 
 
-if __name__ == "__main__":
-    load = HeadHunterAPI()  # создаем объект API
-    vac = load.get_vacancies
-    print(vac)
+# if __name__ == "__main__":
+#     load = HeadHunterAPI()  # создаем объект API
+#     vac = load.get_vacancies
+#     print(vac)
 #     result = load.get_vacancies('Плотник')
 #     # pprint.pprint(result)# получен json
 #     vac = load.vacancies

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List, Dict, Any, Optional
 
 class BaseApi(ABC):
     """Базовый абстрактный клас для API методов"""
@@ -12,19 +13,20 @@ class BaseApi(ABC):
         pass
 
 
-class BaseJson(ABC):
+class BaseJSON(ABC):
+    """Абстрактный класс для работы с файлами или хранилищами данных"""
+
     @abstractmethod
-    def save_data(self, data):
+    def add_vacancy(self, vacancy: Dict[str, Any]) -> None:
+        """Добавить вакансию"""
         pass
 
     @abstractmethod
-    def read_data(self):
+    def get_vacancies(self, criteria: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Получить список вакансий по критериям"""
         pass
 
     @abstractmethod
-    def add_vacancy(self):
-        pass
-
-    @abstractmethod
-    def delete_vacancy(self):
+    def delete_vacancy(self, criteria: Dict[str, Any]) -> None:
+        """Удалить вакансию по критерию"""
         pass

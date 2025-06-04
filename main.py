@@ -1,16 +1,17 @@
 from src.class_api import HeadHunterAPI
-from src.class_vacancy_worker import Vacancy
 from src.class_json_operation import JSONSaver
+from src.class_vacancy_worker import Vacancy
 
 
-def user_interaction():
+def user_interaction() -> None:
     """Функция для взаимодействия с пользователем."""
     print("Добро пожаловать в приложение по поиску вакансий!")
 
     search_query = input("Введите поисковый запрос: ")
     top_n = int(input("Введите количество вакансий для загрузки: "))
     filter_words = input(
-        "Введите ключевые слова для фильтрации через пробел (например, 'Москва инженер') или оставьте пустым: ").split()
+        "Введите ключевые слова для фильтрации через пробел (например, 'Москва инженер') или оставьте пустым: "
+    ).split()
     salary_range_input = input("Введите диапазон зарплат (например, 50000-150000) или оставьте пустым: ")
 
     # Шаг 1: Получаем вакансии с HH
@@ -52,15 +53,16 @@ def user_interaction():
     # Шаг 7: Сортировка по зарплате
     while True:
         sort_choice = input("\nХотите отсортировать вакансии по зарплате? (да/нет): ").lower()
-        if sort_choice == 'нет':
+        if sort_choice == "нет":
+            print("Сортировка не совершена")
             break
-        elif sort_choice == 'да':
+        elif sort_choice == "да":
             while True:
                 reverse_choice = input("Сортировать по возрастанию (в) или убыванию (у)? ").lower()
-                if reverse_choice == 'в':
+                if reverse_choice == "в":
                     reverse = False
                     break
-                elif reverse_choice == 'у':
+                elif reverse_choice == "у":
                     reverse = True
                     break
                 else:

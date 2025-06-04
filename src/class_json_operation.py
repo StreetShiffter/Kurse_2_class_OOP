@@ -1,12 +1,15 @@
-import os
 import json
+import os
 import re
-from typing import Union, List
+from typing import Union
+
+from src.class_abstract import BaseFileStorage
 from src.class_vacancy_worker import Vacancy
-from src.class_api import HeadHunterAPI
+
+#from src.class_api import HeadHunterAPI
 
 
-class JSONSaver:
+class JSONSaver(BaseFileStorage):
     """Класс для сохранения и загрузки данных о вакансиях в/из JSON-файла."""
 
     def __init__(self):
@@ -20,6 +23,7 @@ class JSONSaver:
         return self.__filepath
 
     def _write_to_file(self, data: list) -> None:
+        """Защищеный метод записи в файл"""
         try:
             with open(self.filepath, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
@@ -28,6 +32,7 @@ class JSONSaver:
             raise IOError(f"Ошибка при записи в файл: {e}")
 
     def save_to_json(self, vacancies: list) -> None:
+        """Метод сохранения данных в json"""
         try:
             if isinstance(vacancies[0], Vacancy):
                 data = [vacancy.to_dict() for vacancy in vacancies]
@@ -39,8 +44,8 @@ class JSONSaver:
         except Exception as e:
             print(f"Ошибка при сохранении данных в JSON: {e}")
 
-
     def load_from_json(self) -> list:
+        """Метод загрузки данных в json"""
         try:
             with open(self.filepath, "r", encoding="utf-8") as file:
                 data = json.load(file)
@@ -52,8 +57,8 @@ class JSONSaver:
             print(f"Ошибка чтения JSON из файла {self.filepath}.")
             return []
 
-
     def clear_file(self) -> None:
+        """Метод полной чистки файла"""
         try:
             with open(self.filepath, "w", encoding="utf-8") as file:
                 file.write("[]")
@@ -61,8 +66,8 @@ class JSONSaver:
         except Exception as e:
             print(f"Ошибка при очистке файла: {e}")
 
-
     def add_vacancy(self, vacancy: Union[Vacancy, dict]) -> None:
+        """Метод добавления вакансий в файл"""
         current_data = self.load_from_json()  # Теперь это список словарей
 
         if isinstance(vacancy, Vacancy):
@@ -86,6 +91,7 @@ class JSONSaver:
             print(e)
 
     def delete_vacancy_by_id(self, id: str) -> None:
+        """Метод удаления вакансии по ID"""
         data = self.load_from_json()
         filtered_data = [item for item in data if item.get("id") != id]
 
@@ -103,24 +109,27 @@ class JSONSaver:
         pattern = re.compile(keyword, re.IGNORECASE)
 
         result = [
-            item for item in data
+            item
+            for item in data
             if pattern.search(item.get("name", ""))
-               or pattern.search(item.get("description", ""))
-               or pattern.search(item.get("area", ""))
+            or pattern.search(item.get("description", ""))
+            or pattern.search(item.get("area", ""))
         ]
 
         print(f"Найдено {len(result)} вакансий по ключевому слову '{keyword}'.")
         return result
 
     def filter_vacancies_by_keyword(self, keyword: str) -> list[Vacancy]:
+        """Фильтр вакансий по критериям"""
         data = self.load_from_json()
         pattern = re.compile(keyword, re.IGNORECASE)
 
         filtered_data = [
-            item for item in data
+            item
+            for item in data
             if pattern.search(item.get("name", ""))
-               or pattern.search(item.get("description", ""))
-               or pattern.search(item.get("area", ""))
+            or pattern.search(item.get("description", ""))
+            or pattern.search(item.get("area", ""))
         ]
 
         result = Vacancy.cast_to_object_list(filtered_data)
@@ -128,6 +137,7 @@ class JSONSaver:
         return result
 
     def filter_vacancies_by_salary_range(self, salary_range: str) -> list[Vacancy]:
+        """Фильтр по воронке ЗП"""
         try:
             min_salary, max_salary = map(int, salary_range.split("-"))
         except ValueError:
@@ -140,8 +150,9 @@ class JSONSaver:
             salary_from = item.get("salary_from", 0)
             salary_to = item.get("salary_to", 0)
 
-            if (salary_from and min_salary <= salary_from <= max_salary) or \
-               (salary_to and min_salary <= salary_to <= max_salary):
+            if (salary_from and min_salary <= salary_from <= max_salary) or (
+                salary_to and min_salary <= salary_to <= max_salary
+            ):
                 filtered_data.append(item)
 
         result = Vacancy.cast_to_object_list(filtered_data)
@@ -208,20 +219,20 @@ class JSONSaver:
 # #
 #     print("\nПуть к файлу:", saver.filepath)
 
-        # работа через объекты(запасной вариант)
-        # print(f"{v.name} | {v.area} | {v.salary_from}-{v.salary_to} | {v.id}")
+# работа через объекты(запасной вариант)
+# print(f"{v.name} | {v.area} | {v.salary_from}-{v.salary_to} | {v.id}")
 
-        # print("\n=== Удаляем вакансии из города Москва ===")
-        # saver.delete_vacancies_by_city("Екатеринбург")
+# print("\n=== Удаляем вакансии из города Москва ===")
+# saver.delete_vacancies_by_city("Екатеринбург")
 
 
-        # def delete_vacancies_by_city(self, city: str) -> None:
-        #     data = self.load_from_json()
-        #     filtered_data = [item for item in data if item.get("area") != city]
-        #
-        #     removed_count = len(data) - len(filtered_data)
-        #     if removed_count == 0:
-        #         print(f"Вакансий в городе {city} не найдено.")
-        #     else:
-        #         self._write_to_file(filtered_data)
-        #         print(f"Удалено {removed_count} вакансий из города {city}.")
+# def delete_vacancies_by_city(self, city: str) -> None:
+#     data = self.load_from_json()
+#     filtered_data = [item for item in data if item.get("area") != city]
+#
+#     removed_count = len(data) - len(filtered_data)
+#     if removed_count == 0:
+#         print(f"Вакансий в городе {city} не найдено.")
+#     else:
+#         self._write_to_file(filtered_data)
+#         print(f"Удалено {removed_count} вакансий из города {city}.")

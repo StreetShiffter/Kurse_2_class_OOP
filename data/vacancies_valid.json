@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Python разработчик",
+        "id": "123456",
+        "area": "Москва",
+        "salary": {
+            "from": 80000,
+            "to": 120000
+        },
+        "description": "Работа с Python"
+    },
+    {
+        "name": "Junior Python",
+        "id": "789012",
+        "area": "Новосибирск",
+        "salary": {
+            "from": 60000,
+            "to": 90000
+        },
+        "description": "Стажировка"
+    }
+]

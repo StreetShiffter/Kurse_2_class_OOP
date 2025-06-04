@@ -43,10 +43,31 @@ class JSONSaver(BaseJSON):
 
     def _save_data(self, data: List[Dict]) -> None:
         """Сохранение данных в файл"""
-        with open(self.__file_path, "w", encoding="utf-8") as f:
+        with open(self.__file_path, "a", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
-    def add_vacancy(self, vacancy: Dict[str, Any]) -> None:
+    # def add_vacancy(self, vacancy: Dict[str, Any]) -> None:
+    #     """Добавление уникальной вакансии в файл"""
+    #     data = self._load_data()
+    #
+    #     # Проверяем на дубликаты по имени + зарплате
+    #     is_duplicate = False
+    #     for item in data:
+    #         if (
+    #             item.get("name") == vacancy.get("name")
+    #             and item.get("salary_from") == vacancy.get("salary_from")
+    #             and item.get("salary_to") == vacancy.get("salary_to")
+    #         ):
+    #             is_duplicate = True
+    #             break
+    #
+    #     if not is_duplicate:
+    #         data.append(vacancy.to_dict())
+    #         self._save_data(data)
+    #         print(f"[INFO] Вакансия '{vacancy.get('name')}' успешно добавлена.")
+    #     else:
+    #         print(f"[INFO] Вакансия '{vacancy.get('name')}' уже существует.")
+    def add_vacancy(self, vacancy: Vacancy) -> None:
         """Добавление уникальной вакансии в файл"""
         data = self._load_data()
 
@@ -54,19 +75,19 @@ class JSONSaver(BaseJSON):
         is_duplicate = False
         for item in data:
             if (
-                item.get("name") == vacancy.get("name")
-                and item.get("salary_from") == vacancy.get("salary_from")
-                and item.get("salary_to") == vacancy.get("salary_to")
+                    item.get("name") == vacancy.name
+                    and item.get("salary_from") == vacancy.salary_from
+                    and item.get("salary_to") == vacancy.salary_to
             ):
                 is_duplicate = True
                 break
 
         if not is_duplicate:
-            data.append(vacancy)
+            data.append(vacancy.to_dict())
             self._save_data(data)
-            print(f"[INFO] Вакансия '{vacancy.get('name')}' успешно добавлена.")
+            print(f"[INFO] Вакансия '{vacancy.name}' успешно добавлена.")
         else:
-            print(f"[INFO] Вакансия '{vacancy.get('name')}' уже существует.")
+            print(f"[INFO] Вакансия '{vacancy.name}' уже существует.")
 
     def get_vacancies(self, criteria: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Получение вакансий по критериям"""
@@ -85,58 +106,75 @@ class JSONSaver(BaseJSON):
                 result.append(item)
         return result
 
-    def delete_vacancy(self, criteria: Dict[str, Any]) -> None:
-        """Удаление вакансии по критерию"""
+    # def delete_vacancy(self, criteria: Dict[str, Any]) -> None:
+    #     """Удаление вакансии по критерию"""
+    #     data = self._load_data()
+    #     new_data = [item for item in data if not all(item.get(k) == v for k, v in criteria.items())]
+    #     self._save_data(new_data)
+    def delete_vacancy(self, vacancy: Vacancy) -> None:
+        """Удаление вакансии по критерию (через объект Vacancy)"""
         data = self._load_data()
-        new_data = [item for item in data if not all(item.get(k) == v for k, v in criteria.items())]
+
+        # Критерий удаления — совпадение name, link и зарплаты
+        new_data = [
+            item for item in data
+            if not (
+                    item.get("name") == vacancy.name and
+                    item.get("link") == vacancy.link and
+                    item.get("salary_from") == vacancy.salary_from and
+                    item.get("salary_to") == vacancy.salary_to
+            )
+        ]
+
         self._save_data(new_data)
+        print(f"[INFO] Вакансия '{vacancy.name}' удалена.")
 
-if __name__ == "__main__":
-
-    api = HeadHunterAPI()
-    vacancies_json = api.get_vacancies(text="Python", per_page=5)
-    print(f"Найдено вакансий: {len(vacancies_json)}")
-
-    vacancies = Vacancy.cast_to_object_list(vacancies_json)
-
-
-    for vac in vacancies:
-        print(f"Название: {vac.name}")
-        print(f"Ссылка: {vac.link}")
-        print(f"Зарплата: {vac.salary_from} - {vac.salary_to}")
-        print(f"Описание: {vac.description}")
-        print("-" * 40)
-
-    # Сохраняем в JSON
-    saver = JSONSaver()
-
-    # Добавляем тестовую вакансию
-    test_vac = {
-        "name": "Шутник",
-        "link": "https://example.com/test-vac",
-        "salary_from": 7500,
-        "salary_to": 10000,
-        "description": "Надо носить кофе сеньорам"
-    }
-    vac_obj = Vacancy.from_dict(test_vac)
-    saver.add_vacancy(vac_obj.to_dict())
-
-    # Добавляем вакансии из API
-    for vac in vacancies:
-        saver.add_vacancy(vac.to_dict())
-
-    # Проверяем содержимое файла
-    saved_vacs = saver.get_vacancies()
-    print("\n[INFO] Вакансии в файле:")
-    for v in saved_vacs:
-        print(v)
-
-        # Удаляем тестовую вакансию по ссылке
-    print("\n[INFO] Удаляем тестовую вакансию...")
-    saver.delete_vacancy({"link": "https://example.com/test-vac"})
-
-    # Проверяем, что вакансия удалена
-    saved_vacs_after = saver.get_vacancies()
-    print("\n[INFO] Вакансии в файле после удаления:")
-    for v in saved_vacs_after:
-        print(v)
+# if __name__ == "__main__":
+#
+#     api = HeadHunterAPI()
+#     vacancies_json = api.get_vacancies(text="Python", per_page=5)
+#     print(f"Найдено вакансий: {len(vacancies_json)}")
+#
+#     vacancies = Vacancy.cast_to_object_list(vacancies_json)
+#
+#
+#     for vac in vacancies:
+#         print(f"Название: {vac.name}")
+#         print(f"Ссылка: {vac.link}")
+#         print(f"Зарплата: {vac.salary_from} - {vac.salary_to}")
+#         print(f"Описание: {vac.description}")
+#         print("-" * 40)
+#
+#     # Сохраняем в JSON
+#     saver = JSONSaver()
+#
+#     # Добавляем тестовую вакансию
+#     test_vac = {
+#         "name": "Шутник",
+#         "link": "https://example.com/test-vac",
+#         "salary_from": 7500,
+#         "salary_to": 10000,
+#         "description": "Надо носить кофе сеньорам"
+#     }
+#     vac_obj = Vacancy.from_dict(test_vac)
+#     saver.add_vacancy(vac_obj.to_dict())
+#
+#     # Добавляем вакансии из API
+#     for vac in vacancies:
+#         saver.add_vacancy(vac.to_dict())
+#
+#     # Проверяем содержимое файла
+#     saved_vacs = saver.get_vacancies()
+#     print("\n[INFO] Вакансии в файле:")
+#     for v in saved_vacs:
+#         print(v)
+#
+#         # Удаляем тестовую вакансию по ссылке
+#     print("\n[INFO] Удаляем тестовую вакансию...")
+#     saver.delete_vacancy({"link": "https://example.com/test-vac"})
+#
+#     # Проверяем, что вакансия удалена
+#     saved_vacs_after = saver.get_vacancies()
+#     print("\n[INFO] Вакансии в файле после удаления:")
+#     for v in saved_vacs_after:
+#         print(v)

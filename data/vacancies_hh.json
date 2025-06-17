@@ -1,0 +1,17 @@
+[
+    {
+        "name": "Python разработчик",
+        "description": "",
+        "area": "Москва"
+    },
+    {
+        "name": "Python",
+        "description": "Ищем разработчика",
+        "area": "Санкт-Петербург"
+    },
+    {
+        "name": "Java",
+        "description": "Ищем Java разработчика",
+        "area": "Новосибирск"
+    }
+]
